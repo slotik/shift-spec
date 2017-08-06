@@ -52,6 +52,10 @@ enum BinaryOperator {
 enum UnaryOperator { "+", "-", "!", "~", "typeof", "void", "delete" };
 enum UpdateOperator { "++", "--" };
 
+/*
+ * FIXME generalize to record
+ * - result type annotation
+ */
 // `FunctionExpression`, `FunctionDeclaration`, `GeneratorExpression`, `GeneratorDeclaration`, `AsyncFunctionExpression`, `AsyncFunctionDeclaration`
 interface Function {
   // True for `AsyncFunctionExpression` and `AsyncFunctionDeclaration`, false otherwise.
@@ -219,6 +223,13 @@ interface ClassDeclaration : Statement {
 };
 ClassDeclaration implements Class;
 
+/*
+ * FIXME generalize to record
+ * - field declaration, type annotation and initialization
+ * - access modifiers on both fields and methods
+ * - special constructor syntax that declares class fields using access
+ *   modifiers on constructor arguments
+ */
 interface ClassElement : Node {
   // True iff `IsStatic` of ClassElement is true.
   attribute boolean isStatic;
@@ -643,6 +654,10 @@ interface Directive : Node {
   attribute string rawValue;
 };
 
+/*
+ * FIXME generalize to record
+ * - parameter type annotations
+ */
 interface FormalParameters : Node {
   attribute Parameter[] items;
   attribute Binding? rest;
@@ -691,6 +706,10 @@ interface VariableDeclaration : Node {
   [NonEmpty] attribute VariableDeclarator[] declarators;
 };
 
+/*
+ * FIXME generalize to record
+ * - variable type annotation
+ */
 interface VariableDeclarator : Node {
   attribute Binding binding;
   attribute Expression? init;
