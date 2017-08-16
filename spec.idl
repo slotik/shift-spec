@@ -52,6 +52,7 @@ enum BinaryOperator {
 enum UnaryOperator { "+", "-", "!", "~", "typeof", "void", "delete" };
 enum UpdateOperator { "++", "--" };
 
+// FIXME model "abstract" as well
 enum Modifier { "public", "protected", "private", "static", "readonly" }
 
 interface SignatureDeclaration {
