@@ -52,18 +52,34 @@ enum BinaryOperator {
 enum UnaryOperator { "+", "-", "!", "~", "typeof", "void", "delete" };
 enum UpdateOperator { "++", "--" };
 
-/*
- * FIXME generalize to record
- * - result type annotation
- */
+enum Modifier { "public", "protected", "private", "static", "readonly" }
+
+interface SignatureDeclaration {
+  attribute PropertyName? name;
+  attribute TypeParameterDeclaration[]? typeParameters;
+  attribute ParameterDeclaration[] parameters;
+  attribute TypeNode? type;
+}
+
+// function/method parameter
+interface ParameterDeclaration : NamedDeclaration {
+  attribute SignatureDeclaration? parent;
+  attribute Modifier[]? modifiers;         // set only on constructor signatures
+  attribute boolean restParameter;
+  attribute Binding name;
+  attribute boolean hasQuestionToken;
+  attribute TypeNode? type;
+  attribute Expression? initializer;
+}
+
 // `FunctionExpression`, `FunctionDeclaration`, `GeneratorExpression`, `GeneratorDeclaration`, `AsyncFunctionExpression`, `AsyncFunctionDeclaration`
-interface Function {
+interface Function : SignatureDeclaration {
   // True for `AsyncFunctionExpression` and `AsyncFunctionDeclaration`, false otherwise.
   attribute boolean isAsync;
   // True for `GeneratorExpression` and `GeneratorDeclaration`, false otherwise.
   attribute boolean isGenerator;
-  attribute FormalParameters params;
-  attribute FunctionBody body;
+  attribute boolean hasQuestionToken;
+  attribute (FunctionBody or Expression) body;
 };
 
 // node classes
@@ -80,6 +96,153 @@ interface IterationStatement : Statement {
   attribute Statement body;
 };
 
+interface TypeNode : Node { };
+
+// FIXME model types in more detail
+/*
+    export interface KeywordTypeNode extends TypeNode {
+        kind: SyntaxKind.AnyKeyword
+            | SyntaxKind.NumberKeyword
+            | SyntaxKind.ObjectKeyword
+            | SyntaxKind.BooleanKeyword
+            | SyntaxKind.StringKeyword
+            | SyntaxKind.SymbolKeyword
+            | SyntaxKind.ThisKeyword
+            | SyntaxKind.VoidKeyword
+            | SyntaxKind.UndefinedKeyword
+            | SyntaxKind.NullKeyword
+            | SyntaxKind.NeverKeyword;
+    }
+
+    export interface ThisTypeNode extends TypeNode {
+        kind: SyntaxKind.ThisType;
+    }
+
+    export type FunctionOrConstructorTypeNode = FunctionTypeNode | ConstructorTypeNode;
+
+    export interface FunctionTypeNode extends TypeNode, SignatureDeclaration {
+        kind: SyntaxKind.FunctionType;
+    }
+
+    export interface ConstructorTypeNode extends TypeNode, SignatureDeclaration {
+        kind: SyntaxKind.ConstructorType;
+    }
+
+    export type TypeReferenceType = TypeReferenceNode | ExpressionWithTypeArguments;
+
+    export interface TypeReferenceNode extends TypeNode {
+        kind: SyntaxKind.TypeReference;
+        typeName: EntityName;
+        typeArguments?: NodeArray<TypeNode>;
+    }
+
+    export interface TypePredicateNode extends TypeNode {
+        kind: SyntaxKind.TypePredicate;
+        parameterName: Identifier | ThisTypeNode;
+        type: TypeNode;
+    }
+
+    export interface TypeQueryNode extends TypeNode {
+        kind: SyntaxKind.TypeQuery;
+        exprName: EntityName;
+    }
+
+    // A TypeLiteral is the declaration node for an anonymous symbol.
+    export interface TypeLiteralNode extends TypeNode, Declaration {
+        kind: SyntaxKind.TypeLiteral;
+        members: NodeArray<TypeElement>;
+    }
+
+    export interface ArrayTypeNode extends TypeNode {
+        kind: SyntaxKind.ArrayType;
+        elementType: TypeNode;
+    }
+
+    export interface TupleTypeNode extends TypeNode {
+        kind: SyntaxKind.TupleType;
+        elementTypes: NodeArray<TypeNode>;
+    }
+
+    export type UnionOrIntersectionTypeNode = UnionTypeNode | IntersectionTypeNode;
+
+    export interface UnionTypeNode extends TypeNode {
+        kind: SyntaxKind.UnionType;
+        types: NodeArray<TypeNode>;
+    }
+
+    export interface IntersectionTypeNode extends TypeNode {
+        kind: SyntaxKind.IntersectionType;
+        types: NodeArray<TypeNode>;
+    }
+
+    export interface ParenthesizedTypeNode extends TypeNode {
+        kind: SyntaxKind.ParenthesizedType;
+        type: TypeNode;
+    }
+
+    export interface TypeOperatorNode extends TypeNode {
+        kind: SyntaxKind.TypeOperator;
+        operator: SyntaxKind.KeyOfKeyword;
+        type: TypeNode;
+    }
+
+    export interface IndexedAccessTypeNode extends TypeNode {
+        kind: SyntaxKind.IndexedAccessType;
+        objectType: TypeNode;
+        indexType: TypeNode;
+    }
+
+    export interface MappedTypeNode extends TypeNode, Declaration {
+        kind: SyntaxKind.MappedType;
+        parent?: TypeAliasDeclaration;
+        readonlyToken?: ReadonlyToken;
+        typeParameter: TypeParameterDeclaration;
+        questionToken?: QuestionToken;
+        type?: TypeNode;
+    }
+
+    export interface LiteralTypeNode extends TypeNode {
+        kind: SyntaxKind.LiteralType;
+        literal: Expression;
+    }
+    export interface NullLiteral extends PrimaryExpression, TypeNode {
+    kind: SyntaxKind.NullKeyword;
+    }
+
+    export interface BooleanLiteral extends PrimaryExpression, TypeNode {
+    kind: SyntaxKind.TrueKeyword | SyntaxKind.FalseKeyword;
+    }
+    export interface ThisExpression extends PrimaryExpression, KeywordTypeNode {
+    kind: SyntaxKind.ThisKeyword;
+    }
+
+*/
+
+/* FIXME deal with these
+
+// when calling a constructor
+export interface NewExpression extends PrimaryExpression, Declaration {
+    kind: SyntaxKind.NewExpression;
+    expression: LeftHandSideExpression;
+    typeArguments?: NodeArray<TypeNode>;
+    arguments?: NodeArray<Expression>;
+}
+
+// as expression
+export interface AsExpression extends Expression {
+    kind: SyntaxKind.AsExpression;
+    expression: Expression;
+    type: TypeNode;
+}
+
+// <> cast
+export interface TypeAssertion extends UnaryExpression {
+    kind: SyntaxKind.TypeAssertionExpression;
+    type: TypeNode;
+    expression: UnaryExpression;
+}
+*/
+
 interface Expression : Node { };
 // `MemberExpression`, `SuperProperty`
 interface MemberExpression : Expression {
@@ -92,12 +255,9 @@ interface PropertyName : Node { };
 
 // `PropertyDefinition`
 interface ObjectProperty : Node { };
-// `PropertyName : AssignmentExpression`, `MethodDefinition`
+// `PropertyName : AssignmentExpression`
 interface NamedObjectProperty : ObjectProperty {
   attribute PropertyName name;
-};
-interface MethodDefinition : NamedObjectProperty {
-  attribute FunctionBody body;
 };
 
 interface ImportDeclaration : Node {
@@ -119,9 +279,6 @@ typedef (AssignmentTargetIdentifier or MemberAssignmentTarget) SimpleAssignmentT
 typedef (ObjectAssignmentTarget or ArrayAssignmentTarget) AssignmentTargetPattern;
 // `DestructuringAssignmentTarget`
 typedef (AssignmentTargetPattern or SimpleAssignmentTarget) AssignmentTarget;
-
-// `FormalParameter`
-typedef (Binding or BindingWithDefault) Parameter;
 
 interface BindingWithDefault : Node {
   attribute Binding binding;
@@ -205,11 +362,81 @@ interface AssignmentTargetPropertyProperty : AssignmentTargetProperty {
   attribute (AssignmentTarget or AssignmentTargetWithDefault) binding;
 };
 
+// captures generic arguments on interfaces, classes, methods, functions
+interface TypeParameterDeclaration : Node {
+  // FIXME define TypeAlias and Signature
+  attribute (Class or InterfaceDeclaration or TypeAlias or Signature)? parent;
+  attribute Identifier name;
+  attribute TypeNode? constraint;
+  attribute TypeNode? default;
+}
+
+interface ExpressionWithTypeArguments : TypeNode {
+  attribute HeritageClause? parent;
+  /*
+   * In TypeScript, the "destination" class/interface of a heritage clause is
+   * allowed to be an arbitrary `LeftHandSideExpression`` which would perhaps
+   * best translate into `AssignmentTarget`. However, in the original version
+   * of this spec, the superclass is an arbitrary Expression, so here we retain
+   * that permissiveness.
+   */
+  attribute Expression expression;
+  attribute TypeNode[]? typeArguments;
+}
+
+interface HeritageClause : Node {
+  attribute (InterfaceDeclaration or Class)? parent;
+  attribute ExpressionWithTypeArguments[] types>;
+}
+interface ExtendsClause : HeritageClause { }
+interface ImplementsClause : HeritageClause { }
+
+
+// interfaces
+
+interface InterfaceDeclaration : Statement {
+  attribute Identifier name;
+  attribute TypeParameterDeclaration[]? typeParameters;
+  attribute HeritageClause[]? heritageClauses;
+  attribute TypeElement[] elements;
+}
+
+interface TypeElement : Node {
+  attribute PropertyName? name;
+  attribute boolean hasQuestionToken;
+}
+
+interface CallSignatureDeclaration : TypeElement { }
+CallSignatureDeclaration implements SignatureDeclaration;
+
+interface ConstructSignatureDeclaration : TypeElement { }
+ConstructSignatureDeclaration implements SignatureDeclaration;
+
+interface MethodSignature : TypeElement {
+  attribute PropertyName name;
+}
+MethodSignature implements SignatureDeclaration;
+
+// FIXME define TypeLiteralNode
+interface IndexSignatureDeclaration : SignatureDeclaration {
+  attribute (Class | InterfaceDeclaration | TypeLiteralNode)? parent;
+}
+IndexSignatureDeclaration implements TypeElement;
+IndexSignatureDeclaration implements ClassElement;
+
+// this is for representing members of an interface declaration, i.e. (name, type) pairs; note the other TypeElement things that also can be present in an interface
+interface PropertySignature : TypeElement {
+  attribute PropertyName name;
+  attribute boolean hasQuestionToken;
+  attribute TypeNode? type;
+  attribute Expression? initializer;
+}
 
 // classes
 
 interface Class {
-  attribute Expression? super;
+  attribute TypeParameterDeclaration[]? typeParameters;
+  attribute HeritageClause[]? heritageClauses;
   attribute ClassElement[] elements;
 };
 
@@ -223,19 +450,33 @@ interface ClassDeclaration : Statement {
 };
 ClassDeclaration implements Class;
 
-/*
- * FIXME generalize to record
- * - field declaration, type annotation and initialization
- * - access modifiers on both fields and methods
- * - special constructor syntax that declares class fields using access
- *   modifiers on constructor arguments
- */
 interface ClassElement : Node {
-  // True iff `IsStatic` of ClassElement is true.
-  attribute boolean isStatic;
-  attribute MethodDefinition method;
-};
+  attribute PropertyName? name;
+  attribute boolean hasQuestionToken;
+}
 
+// type aliases
+
+interface TypeAliasDeclaration : Statement {
+  attribute Identifier name;
+  attribute TypeParameterDeclaration[]? typeParameters;
+  attribute TypeNode type;
+}
+
+// enums
+
+interface EnumDeclaration : Statement {
+  attribute Identifier name;
+  attribute EnumElement[] elements;
+}
+
+interface EnumElement : Node {
+  attribute EnumDeclaration? parent;
+  // This does include ComputedPropertyName, but the parser will give an error
+  // if it parses a ComputedPropertyName in an EnumMember
+  attribute PropertyName name;
+  attribute Expression? initializer;
+}
 
 // modules
 
@@ -310,26 +551,56 @@ interface ExportLocalSpecifier : Node {
 // property definition
 
 // `MethodDefinition :: PropertyName ( UniqueFormalParameters ) { FunctionBody }`, `GeneratorMethod :: * PropertyName ( UniqueFormalParameters ) { GeneratorBody }`, `AsyncMethod :: async PropertyName ( UniqueFormalParameters ) { AsyncFunctionBody }`
-interface Method : MethodDefinition {
-  // True for `AsyncMethod`, false otherwise.
-  attribute boolean isAsync;
-  // True for `GeneratorMethod`, false otherwise.
-  attribute boolean isGenerator;
-  // The `UniqueFormalParameters`.
-  attribute FormalParameters params;
+interface Method : Function {
+  attribute Modifier[] modifiers;
+  attribute PropertyName name;
+  attribute FunctionBody? body;
 };
+Method implements ClassElement;
+Method implements NamedObjectProperty;
+
+interface ConstructorDeclaration : Function {
+  attribute Modifier[] modifiers;
+  attribute Class? parent;
+  attribute FunctionBody? body;
+}
+ConstructorDeclaration implements ClassElement;
+
+/** For when we encounter a semicolon in a class declaration. ES6 allows these as class elements. */
+interface SemicolonClassElement : ClassElement {
+  attribute Class? parent;
+}
 
 // `get PropertyName ( ) { FunctionBody }`
-interface Getter : MethodDefinition { };
+interface Getter : Function {
+  attribute (Class or ObjectExpression)? parent;
+  attribute Modifier[] modifiers;
+  attribute PropertyName name;
+  attribute FunctionBody body;
+};
+Getter implements ClassElement;
+Getter implements NamedObjectProperty;
 
 // `set PropertyName ( PropertySetParameterList ) { FunctionBody }`
-interface Setter : MethodDefinition {
-  // The `PropertySetParameterList`.
-  attribute Parameter param;
+interface Setter : Function {
+  attribute (Class or ObjectExpression)? parent;
+  attribute Modifier[] modifiers;
+  attribute PropertyName name;
+  attribute FunctionBody body;
 };
+Setter implements ClassElement;
+Setter implements NamedObjectProperty;
+
+interface PropertyDeclaration : ClassElement {
+  attribute boolean hasQuestionToken;
+  attribute PropertyName: name;
+  attribute TypeNode? type;
+  attribute Expression? initializer;
+}
 
 // `PropertyDefinition :: PropertyName : AssignmentExpression`
 interface DataProperty : NamedObjectProperty {
+  attribute boolean hasQuestionToken;
   // The `AssignmentExpression`.
   attribute Expression expression;
 };
@@ -401,9 +672,9 @@ interface ArrayExpression : Expression {
 interface ArrowExpression : Expression {
   // True for `AsyncArrowFunction`, false otherwise.
   attribute boolean isAsync;
-  attribute FormalParameters params;
   attribute (FunctionBody or Expression) body;
 };
+ArrowExpression implements Function;
 
 // `AssignmentExpression :: LeftHandSideExpression = AssignmentExpression`
 interface AssignmentExpression : Expression {
@@ -424,6 +695,7 @@ interface BinaryExpression : Expression {
 
 interface CallExpression : Expression {
   attribute (Expression or Super) callee;
+  attribute TypeNode[]? typeArguments;
   attribute Arguments arguments;
 };
 
@@ -654,15 +926,6 @@ interface Directive : Node {
   attribute string rawValue;
 };
 
-/*
- * FIXME generalize to record
- * - parameter type annotations
- */
-interface FormalParameters : Node {
-  attribute Parameter[] items;
-  attribute Binding? rest;
-};
-
 interface FunctionBody : Node {
   attribute Directive[] directives;
   attribute Statement[] statements;
@@ -670,6 +933,7 @@ interface FunctionBody : Node {
 
 interface FunctionDeclaration : Statement {
   attribute BindingIdentifier name;
+  attribute FunctionBody body;
 };
 FunctionDeclaration implements Function;
 
@@ -706,11 +970,8 @@ interface VariableDeclaration : Node {
   [NonEmpty] attribute VariableDeclarator[] declarators;
 };
 
-/*
- * FIXME generalize to record
- * - variable type annotation
- */
 interface VariableDeclarator : Node {
   attribute Binding binding;
+  attribute TypeNode?: type;
   attribute Expression? init;
 };
